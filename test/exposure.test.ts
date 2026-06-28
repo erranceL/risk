@@ -61,6 +61,17 @@ test("out-of-order terminal before open does not resurrect position", () => {
   assert.equal(book.getOpenCount(), 0);
 });
 
+test("rejects invalid sequence and does not mutate exposure", () => {
+  const book = new ExposureBook();
+  const invalid: RiskEvent = {
+    ...event(1, "order-invalid"),
+    sequence: Number.NaN,
+  };
+  const result = book.applyEvent(invalid);
+  assert.equal(result.accepted, false);
+  assert.equal(book.getOpenCount(), 0);
+});
+
 test("rebuild from snapshot resets resync state", () => {
   const book = new ExposureBook();
   book.applyEvent(event(5, "order-5"));

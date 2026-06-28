@@ -131,7 +131,7 @@ Any quote with negative house edge is blocked.
 - `GET /metrics`: advisory metrics. _Open._
 - `GET /health`: health check (includes `needsResync`, `gapDepth`, `cursor`). _Open._
 
-Auth uses `Authorization: Bearer <token>`. An empty token means the endpoint is open (local/dev only) — set all three tokens in production. Request bodies are capped at `MAX_BODY_BYTES` (default 1 MiB).
+Auth uses `Authorization: Bearer <token>`. An empty token means the endpoint is open (local/dev only). In `NODE_ENV=production`, startup refuses empty auth tokens unless `RISK_ALLOW_INSECURE_NO_AUTH=true` is explicitly set. Request bodies are capped at `MAX_BODY_BYTES` (default 1 MiB).
 
 ## Local Development
 

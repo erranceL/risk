@@ -103,6 +103,9 @@ export class ExposureBook {
   }
 
   applyEvent(event: RiskEvent): EventApplyResult {
+    if (!event.eventId || !Number.isSafeInteger(event.sequence) || event.sequence <= 0) {
+      return this.result(false, false);
+    }
     if (this.seenEvents.has(event.eventId)) {
       return this.result(false, true);
     }
@@ -170,7 +173,7 @@ export class ExposureBook {
   }
 
   private trackSequence(sequence: number): void {
-    if (!Number.isFinite(sequence)) return;
+    if (!Number.isSafeInteger(sequence) || sequence <= 0) return;
     if (sequence > this.highestSequence) this.highestSequence = sequence;
     if (sequence <= this.contiguousSequence) return;
 

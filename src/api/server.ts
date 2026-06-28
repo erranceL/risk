@@ -2,7 +2,7 @@ import http from "node:http";
 import { URL } from "node:url";
 import { ExposureBook } from "../core/exposure.js";
 import { buildQuote, fallbackQuote } from "../core/pricing.js";
-import type { OpenPositionSnapshot, Period, Quote, RiskConfig, RiskEvent } from "../core/types.js";
+import type { OpenPositionSnapshot, Period, Quote, RiskConfig, RiskEvent, RiskEventType } from "../core/types.js";
 import { defaultRiskConfig, SUPPORTED_PRODUCTS } from "../config/defaults.js";
 import { VersionedConfigStore } from "../config/store.js";
 import { initialMetrics } from "../monitor/metrics.js";
@@ -24,6 +24,14 @@ const configStore = new VersionedConfigStore(
   SUPPORTED_PRODUCTS.map((product) => defaultRiskConfig(product.symbol, product.period)),
 );
 const latestQuotes = new Map<string, Quote>();
+const eventTypes = new Set<RiskEventType>([
+  "ORDER_ACCEPTED",
+  "ORDER_PRICED",
+  "ORDER_SETTLED",
+  "ORDER_REFUNDED",
+  "ORDER_CANCELED",
+  "ORDER_HELD",
+]);
 
 function productKey(symbol: string, period: Period): string {
   return `${symbol}::${period}`;
@@ -74,12 +82,117 @@ function authorize(req: http.IncomingMessage, token: string): boolean {
   return auth === `Bearer ${token}`;
 }
 
-function asEvents(payload: unknown): RiskEvent[] {
-  if (Array.isArray(payload)) return payload as RiskEvent[];
-  if (payload && typeof payload === "object" && Array.isArray((payload as { events?: unknown }).events)) {
-    return (payload as { events: RiskEvent[] }).events;
+function isObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function parseEvent(raw: unknown, index: number): RiskEvent {
+  if (!isObject(raw)) {
+    throw new Error(`events[${index}] must be an object`);
   }
-  return [];
+  const eventId = raw.eventId;
+  const sequence = raw.sequence;
+  const occurredAt = raw.occurredAt;
+  const publishedAt = raw.publishedAt;
+  const type = raw.type;
+  const payloadRaw = raw.payload;
+  if (typeof eventId !== "string" || !eventId.trim()) {
+    throw new Error(`events[${index}].eventId must be non-empty string`);
+  }
+  if (typeof sequence !== "number" || !Number.isSafeInteger(sequence) || sequence <= 0) {
+    throw new Error(`events[${index}].sequence must be positive integer`);
+  }
+  if (!isFiniteNumber(occurredAt) || occurredAt <= 0) {
+    throw new Error(`events[${index}].occurredAt must be positive epoch ms`);
+  }
+  if (!isFiniteNumber(publishedAt) || publishedAt <= 0) {
+    throw new Error(`events[${index}].publishedAt must be positive epoch ms`);
+  }
+  if (typeof type !== "string" || !eventTypes.has(type as RiskEventType)) {
+    throw new Error(`events[${index}].type is invalid`);
+  }
+  if (!isObject(payloadRaw)) {
+    throw new Error(`events[${index}].payload must be an object`);
+  }
+  const orderId = payloadRaw.orderId;
+  const symbol = payloadRaw.symbol;
+  const period = payloadRaw.period;
+  const direction = payloadRaw.direction;
+  const stake = payloadRaw.stake;
+  if (typeof orderId !== "string" || !orderId.trim()) {
+    throw new Error(`events[${index}].payload.orderId must be non-empty string`);
+  }
+  if (typeof symbol !== "string" || !symbol.trim()) {
+    throw new Error(`events[${index}].payload.symbol must be non-empty string`);
+  }
+  if (typeof period !== "string" || !period.trim()) {
+    throw new Error(`events[${index}].payload.period must be non-empty string`);
+  }
+  if (direction !== "LONG" && direction !== "SHORT") {
+    throw new Error(`events[${index}].payload.direction must be LONG or SHORT`);
+  }
+  if (!isFiniteNumber(stake) || stake <= 0) {
+    throw new Error(`events[${index}].payload.stake must be > 0`);
+  }
+  const eventEndTime = payloadRaw.eventEndTime;
+  if (eventEndTime !== undefined && (!isFiniteNumber(eventEndTime) || eventEndTime <= 0)) {
+    throw new Error(`events[${index}].payload.eventEndTime must be positive epoch ms`);
+  }
+  const payoutRateSnapshot = payloadRaw.payoutRateSnapshot;
+  if (payoutRateSnapshot !== undefined && (!isFiniteNumber(payoutRateSnapshot) || payoutRateSnapshot < 0)) {
+    throw new Error(`events[${index}].payload.payoutRateSnapshot must be >= 0`);
+  }
+  const status = payloadRaw.status;
+  if (status !== undefined && typeof status !== "string") {
+    throw new Error(`events[${index}].payload.status must be string`);
+  }
+  return {
+    eventId,
+    sequence: sequence,
+    occurredAt,
+    publishedAt,
+    type: type as RiskEventType,
+    payload: {
+      orderId,
+      symbol,
+      period,
+      direction,
+      stake,
+      payoutRateSnapshot,
+      eventEndTime,
+      status,
+    },
+  };
+}
+
+function asEvents(payload: unknown): RiskEvent[] {
+  if (Array.isArray(payload)) return payload.map((item, index) => parseEvent(item, index));
+  if (payload && typeof payload === "object" && Array.isArray((payload as { events?: unknown }).events)) {
+    return (payload as { events: unknown[] }).events.map((item, index) => parseEvent(item, index));
+  }
+  throw new Error("payload must be an array of events or an object with events[]");
+}
+
+function ensureAuthSafety(): void {
+  const isProd = process.env.NODE_ENV === "production";
+  const allowInsecure = process.env.RISK_ALLOW_INSECURE_NO_AUTH === "true";
+  if (!isProd || allowInsecure) return;
+  const missing = [
+    ["RISK_EVENT_TOKEN", eventToken],
+    ["RISK_CONTROL_TOKEN", controlToken],
+    ["RISK_QUOTE_TOKEN", quoteToken],
+  ]
+    .filter(([, value]) => !value)
+    .map(([name]) => name);
+  if (missing.length) {
+    throw new Error(
+      `refuse to start in production without auth tokens: ${missing.join(", ")}; set tokens or RISK_ALLOW_INSECURE_NO_AUTH=true`,
+    );
+  }
 }
 
 function rebuildQuotes(): void {
@@ -284,6 +397,7 @@ const server = http.createServer((req, res) => {
     readJson(req)
       .then(async (payload) => {
         const config = payload as RiskConfig;
+        const current = configStore.get(config.symbol, config.period);
         configStore.put(config);
         if (storage) {
           try {
@@ -291,6 +405,16 @@ const server = http.createServer((req, res) => {
           } catch (error) {
             metrics.storageErrorCount += 1;
             console.error(error);
+            try {
+              // Revert in-memory state when persistence fails.
+              if (current) {
+                configStore.rollback(config.symbol, config.period);
+              }
+            } catch (rollbackError) {
+              console.error(rollbackError);
+            }
+            sendJson(res, 503, { error: "config persistence failed" });
+            return;
           }
         }
         rebuildQuotes();
@@ -319,6 +443,14 @@ const server = http.createServer((req, res) => {
           } catch (error) {
             metrics.storageErrorCount += 1;
             console.error(error);
+            try {
+              // Roll forward to previous active config if persistence fails.
+              configStore.rollback(body.symbol, body.period);
+            } catch (rollbackError) {
+              console.error(rollbackError);
+            }
+            sendJson(res, 503, { error: "config persistence failed" });
+            return;
           }
         }
         rebuildQuotes();
@@ -350,6 +482,8 @@ async function shutdown(signal: string): Promise<void> {
 
 process.on("SIGTERM", () => void shutdown("SIGTERM"));
 process.on("SIGINT", () => void shutdown("SIGINT"));
+
+ensureAuthSafety();
 
 bootstrap()
   .catch((error) => console.error(error))
