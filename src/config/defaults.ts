@@ -1,13 +1,12 @@
 import type { Period, RiskConfig } from "../core/types.js";
 
 export const SUPPORTED_PRODUCTS: Array<{ symbol: string; period: Period }> = [
-  { symbol: "BTC", period: "30s" },
-  { symbol: "BTC", period: "1m" },
-  { symbol: "BTC", period: "5m" },
-  { symbol: "BTC", period: "10m" },
-  { symbol: "BTC", period: "15m" },
-  { symbol: "BTC", period: "30m" },
-  { symbol: "BTC", period: "1h" },
+  ...["BTC", "ETH", "XAU"].flatMap((symbol) =>
+    (["30s", "1m", "5m", "10m", "15m", "30m", "1h"] as Period[]).map((period) => ({
+      symbol,
+      period,
+    })),
+  ),
 ];
 
 export function defaultRiskConfig(symbol: string, period: Period): RiskConfig {

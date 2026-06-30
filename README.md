@@ -145,6 +145,25 @@ npm start
 
 The service listens on `PORT` (default `8787`).
 
+## Backtest Risk Console
+
+Generate the static Chinese risk console:
+
+```bash
+npm run backtest
+```
+
+The command writes `console/snapshot.json`, then `console/index.html` can be served by GitHub Pages.
+
+Backtest rules:
+
+- Index price uses 1s closes: `0.2 * Binance spot + 0.8 * Binance USD-M perpetual continuous contract`.
+- Entry price uses the index price at `order_time + 1s` for every product window.
+- Settlement price uses the index price at `order_time + product_duration`.
+- Synthetic flow is strictly `>= 2000` orders per product × window. The run aborts if any window falls below that.
+- `configuredPlatformEdge` is the manually effective edge. `suggestedPlatformEdge` is advisory only and never overwrites manual configuration.
+- Full 1s K-line data stays in `backtest-cache/`; the browser console only loads aggregated `snapshot.json`.
+
 If `DATABASE_URL` is set, initialize Postgres first:
 
 ```bash

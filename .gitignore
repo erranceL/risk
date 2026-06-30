@@ -4,3 +4,5 @@ dist/
 .DS_Store
 coverage/
 npm-debug.log*
+sim-out/
+backtest-cache/

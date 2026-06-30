@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nicevent 风控台</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Risk Console</p>
+          <h1>Nicevent 赔率风控台</h1>
+          <p class="muted">
+            基于 1s 自建指数价回测：0.2 币安现货 + 0.8 币安永续。人工 edge 为生效值，建议 edge 仅供参考。
+          </p>
+        </div>
+        <div class="summary" id="summary"></div>
+      </section>
+
+      <section class="toolbar">
+        <label>
+          产品
+          <select id="symbolFilter">
+            <option value="ALL">全部</option>
+          </select>
+        </label>
+        <label>
+          周期
+          <select id="periodFilter">
+            <option value="ALL">全部</option>
+          </select>
+        </label>
+        <label>
+          手动 edge
+          <input id="edgeInput" type="number" min="0.001" max="0.5" step="0.005" value="0.05" />
+        </label>
+        <button id="applyEdge">应用到当前筛选</button>
+      </section>
+
+      <section class="cards" id="cards"></section>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
+
