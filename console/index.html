@@ -13,30 +13,61 @@
           <p class="eyebrow">Risk Console</p>
           <h1>Nicevent 赔率风控台</h1>
           <p class="muted">
-            基于 1s 自建指数价回测：0.2 币安现货 + 0.8 币安永续。人工 edge 为生效值，建议 edge 仅供参考。
+            基于 1s 自建指数价回测：0.2 币安现货 + 0.8 币安永续。你手动设置的 edge 才是生效值，系统给出的建议 edge 只作参考。
           </p>
         </div>
         <div class="summary" id="summary"></div>
       </section>
 
-      <section class="toolbar">
-        <label>
-          产品
-          <select id="symbolFilter">
-            <option value="ALL">全部</option>
-          </select>
-        </label>
-        <label>
-          周期
-          <select id="periodFilter">
-            <option value="ALL">全部</option>
-          </select>
-        </label>
-        <label>
-          手动 edge
-          <input id="edgeInput" type="number" min="0.001" max="0.5" step="0.005" value="0.05" />
-        </label>
-        <button id="applyEdge">应用到当前筛选</button>
+      <section class="control-panel">
+        <div class="panel-head">
+          <div>
+            <h2>你可以控制什么？</h2>
+            <p class="muted">先选产品和周期，再把人工 edge 应用到当前筛选；目标风险和最低平台 return 会影响“建议 edge”。</p>
+          </div>
+          <button id="resetControls" class="secondary">恢复默认</button>
+        </div>
+
+        <div class="toolbar">
+          <label>
+            产品
+            <select id="symbolFilter">
+              <option value="ALL">全部</option>
+            </select>
+          </label>
+          <label>
+            周期
+            <select id="periodFilter">
+              <option value="ALL">全部</option>
+            </select>
+          </label>
+          <label>
+            人工 edge（0.05 = 5%）
+            <input id="edgeInput" type="number" min="0.02" max="0.2" step="0.01" value="0.05" />
+          </label>
+          <label>
+            目标风险等级
+            <input id="targetRiskInput" type="number" min="1" max="10" step="1" value="6" />
+          </label>
+          <label>
+            最低平台 return（0.02 = 2%）
+            <input id="minReturnInput" type="number" min="-0.5" max="0.5" step="0.005" value="0" />
+          </label>
+          <button id="applyEdge">应用到当前筛选</button>
+        </div>
+        <p class="hint" id="controlHint"></p>
+      </section>
+
+      <section class="legend">
+        <h2>怎么看这些指标？</h2>
+        <div class="legend-grid">
+          <div><strong>人工 edge</strong><span>你手动设定的平台抽水/安全垫，是当前页面真正采用的 edge。</span></div>
+          <div><strong>建议 edge</strong><span>系统在候选 edge 里找“平台 return 达标且风险等级不超过目标”的最小值，只是建议。</span></div>
+          <div><strong>平台 return</strong><span>回测里平台赚/亏占成交本金的比例；小于 0 代表这组赔率下平台亏。</span></div>
+          <div><strong>风险等级</strong><span>1-10 分，越高越危险；综合赔率压力、方向失衡、最大亏损和波动。</span></div>
+          <div><strong>用户胜率</strong><span>随机方向订单在这段历史价格上的真实胜率，和 edge 本身无关。</span></div>
+          <div><strong>护栏状态</strong><span>赔率被 floor/ceiling/publish 上下限卡住时会提示，说明 edge 不一定完全转化成赔率。</span></div>
+        </div>
       </section>
 
       <section class="cards" id="cards"></section>
