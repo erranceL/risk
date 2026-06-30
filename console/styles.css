@@ -50,6 +50,7 @@ h1 {
 .summary,
 .control-panel,
 .legend,
+.period-panel,
 .card {
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 18px;
@@ -170,10 +171,120 @@ button.secondary {
   line-height: 1.55;
 }
 
-.cards {
+.product-nav {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.product-tab {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  text-align: left;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #111827;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+}
+
+.product-tab.active {
+  background: #111827;
+  color: #ffffff;
+}
+
+.product-tab span {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.product-tab strong {
+  grid-row: span 2;
+  align-self: center;
+  font-size: 34px;
+  letter-spacing: -0.05em;
+}
+
+.product-tab small {
+  color: inherit;
+  opacity: 0.65;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(520px, 0.95fr) minmax(420px, 1.05fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.period-panel {
+  padding: 18px;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+
+.period-table-wrap {
+  overflow-x: auto;
+}
+
+.period-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+
+.period-table th,
+.period-table td {
+  padding: 12px 10px;
+  border-top: 1px solid #e5e7eb;
+  text-align: left;
+  vertical-align: middle;
+  font-size: 14px;
+}
+
+.period-table th {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.period-table tr {
+  cursor: pointer;
+}
+
+.period-table tbody tr:hover,
+.period-table tbody tr.active {
+  background: #f8fafc;
+}
+
+.period-table tbody tr.active {
+  box-shadow: inset 4px 0 0 #111827;
+}
+
+.period-table td span {
+  display: block;
+  margin-top: 3px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.period-table b {
+  display: inline-block;
+  min-width: 28px;
+  font-size: 20px;
+}
+
+.detail-card {
+  position: sticky;
+  top: 16px;
 }
 
 .card {
@@ -235,6 +346,16 @@ button.secondary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.detail-layout {
+  display: grid;
+  gap: 18px;
+}
+
+h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
 }
 
 .cell {
@@ -319,6 +440,18 @@ button.secondary {
 
   label {
     min-width: 100%;
+  }
+
+  .product-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-card {
+    position: static;
   }
 }
 
